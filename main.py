@@ -1,4 +1,5 @@
 import sys
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5 import uic
@@ -7,6 +8,7 @@ from DBHelper import *
 
 import logging
 import time
+import os
 from collections import deque 
 
 logger = logging.getLogger()
@@ -14,7 +16,7 @@ FORMAT = "[%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
 logging.basicConfig(format=FORMAT)
 logger.setLevel(logging.INFO)
 
-form_class = uic.loadUiType("./ui/send_message_macro_v2.ui")[0]
+form_class = uic.loadUiType(os.path.abspath("./ui/send_message_macro_v2.ui"))[0]
 
 class MyWindow(QMainWindow, form_class):
 
@@ -50,6 +52,8 @@ class MyWindow(QMainWindow, form_class):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        self.setWindowIcon(QIcon('chat.ico'))
 
         """
         스레드
