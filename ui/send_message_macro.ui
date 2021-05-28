@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>667</width>
+    <height>632</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>밴드 채팅 보내기 매크로</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <item>
+       <widget class="QGroupBox" name="account_group">
+        <property name="title">
+         <string>계정</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_6">
+           <item>
+            <widget class="QComboBox" name="account_combobox">
+             <item>
+              <property name="text">
+               <string>계정</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <item>
+              <layout class="QFormLayout" name="formLayout_2">
+               <item row="0" column="0">
+                <widget class="QLabel" name="id_label">
+                 <property name="text">
+                  <string>아이디</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>id_edit</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLineEdit" name="id_edit"/>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="pw_label">
+                 <property name="text">
+                  <string>비밀번호</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>pw_edit</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QLineEdit" name="pw_edit">
+                 <property name="echoMode">
+                  <enum>QLineEdit::Password</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout_8">
+               <item>
+                <widget class="QPushButton" name="validate_btn">
+                 <property name="text">
+                  <string>확인</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="add_btn">
+                 <property name="text">
+                  <string>추가</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QTableWidget" name="account_table">
+             <property name="editTriggers">
+              <set>QAbstractItemView::NoEditTriggers</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QPushButton" name="account_save_btn">
+               <property name="text">
+                <string>저장</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="account_delete_btn">
+               <property name="text">
+                <string>삭제</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="chat_group">
+        <property name="title">
+         <string>채팅방</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <layout class="QFormLayout" name="formLayout">
+               <item row="0" column="0">
+                <widget class="QLabel" name="keyword_label">
+                 <property name="text">
+                  <string>키워드</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>keyword_edit</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLineEdit" name="keyword_edit"/>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="find_btn">
+               <property name="text">
+                <string>찾기</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QTableWidget" name="tableWidget">
+             <property name="editTriggers">
+              <set>QAbstractItemView::NoEditTriggers</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QPushButton" name="chat_save_btn">
+               <property name="text">
+                <string>저장</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="chat_delete_btn">
+               <property name="text">
+                <string>삭제</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="content_group">
+      <property name="title">
+       <string>내용</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QPlainTextEdit" name="content_edit"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="run_btn">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>실행</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stop_btn">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>중지</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>find_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>find()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>644</x>
+     <y>56</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>669</x>
+     <y>12</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>run_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>run()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>197</x>
+     <y>598</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>197</x>
+     <y>611</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stop_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>stop()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>589</x>
+     <y>589</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>606</x>
+     <y>611</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>content_edit</sender>
+   <signal>textChanged()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_text_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>579</x>
+     <y>437</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>664</x>
+     <y>425</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>validate_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>validate_account()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>317</x>
+     <y>83</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>323</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>add_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>add_account()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>317</x>
+     <y>112</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>-3</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>account_save_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>save_account()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>151</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>145</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>account_delete_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>delete_account()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>318</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>305</x>
+     <y>332</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chat_save_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>save_chat()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>493</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>431</x>
+     <y>331</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>chat_delete_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>delete_chat()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>644</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>588</x>
+     <y>335</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>id_edit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_id_edit_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>114</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>108</x>
+     <y>-13</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pw_edit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_pw_edit_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>173</x>
+     <y>98</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>150</x>
+     <y>-8</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>find()</slot>
+  <slot>run()</slot>
+  <slot>stop()</slot>
+  <slot>on_text_changed()</slot>
+  <slot>validate_account()</slot>
+  <slot>add_account()</slot>
+  <slot>save_account()</slot>
+  <slot>save_chat()</slot>
+  <slot>delete_account()</slot>
+  <slot>delete_chat()</slot>
+  <slot>on_id_edit_changed(QString)</slot>
+  <slot>on_pw_edit_changed(QString)</slot>
+ </slots>
+</ui>
