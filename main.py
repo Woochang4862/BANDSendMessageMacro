@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5 import uic
 from SendMessageMacro import *
-from SMMDBHelper import *
+from DBHelper import *
 
 import logging
 import time
