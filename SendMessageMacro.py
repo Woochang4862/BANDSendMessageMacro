@@ -48,6 +48,7 @@ class SendMessageThread(QThread):
             self.on_error_send_msg.emit(self.id, "로그인 실패")
         try:
             self.driver.close()
+            self.driver.quit()
         except:
             self.on_logging_send_msg.emit(self.LOGGING_INFO, "작업이 취소됨")
 
@@ -56,8 +57,9 @@ class SendMessageThread(QThread):
             #self.wait(5000) #5000ms = 5s
             self.quit()
             self.driver.close()
-        except:
-            self.on_logging_send_msg.emit(self.LOGGING_WARNING, "제거할 드라이버 없음")
+            self.driver.quit()
+        except Exception as e:
+            self.on_logging_send_msg.emit(self.LOGGING_WARNING, "제거할 드라이버 없음 : "+e)
 
     def discoverChatsAndSendMessage(self, driver, keywords, texts):
         wait = WebDriverWait(driver, WAIT_SECONDS)
@@ -79,20 +81,20 @@ class SendMessageThread(QThread):
 
                 i+=1
                 chats.append((chat,chat_title))
-                logging.info(f"채팅요소 및 제목 : {len(chats)}")
+                logging.debug(f"채팅요소 및 제목 : {len(chats)}")
             except NoSuchElementException:
                 break
             except InvalidSessionIdException:
                 return
             except Exception as e:
-                logging.exception(e)
+                #logging.exception(e)
                 continue
         self.on_logging_send_msg.emit(self.LOGGING_INFO,f"검사 예정 채팅 목록 수 : {len(chats)}개")
-        logging.info(f"{keywords}, {texts}")
+        logging.debug(f"{keywords}, {texts}")
         correctChats = []
         for chat, chat_title in chats:
             for keyword, text in zip(keywords,texts):
-                #logging.info(f'chat : {chat}, chat_title : {chat_title}')
+                #logging.debug(f'chat : {chat}, chat_title : {chat_title}')
                 if keyword in chat_title:
                     chat.click()
                     driver.switch_to.window(driver.window_handles[1])
@@ -105,14 +107,15 @@ class SendMessageThread(QThread):
                         except:
                             #logging.exception("")
                             err_cnt += 1
-                            #logging.info(f'리스트 부분 로딩 기다림 : {err_cnt}')
+                            #logging.debug(f'리스트 부분 로딩 기다림 : {err_cnt}')
                             if time.time()-start >= 10:
                                 driver.refresh()
+                                start = time.time()
                             continue
                     
                     time.sleep(0.5)
                     
-                    #logging.info(driver.page_source)
+                    #logging.debug(driver.page_source)
                     
                     done = False
                     while not done:
@@ -121,14 +124,15 @@ class SendMessageThread(QThread):
                             
                             isOverlaped = False
                             for m in messages:
-                                #logging.info(m.text.strip())
+                                logging.info(m.text.strip())
+                                logging.info(m.get_attribute("innerText").strip())
                                 if m.text.strip() == text:
                                     isOverlaped = True
                                     self.on_logging_send_msg.emit(self.LOGGING_WARNING, f"'{chat_title}' 조건에 맞지 않는 채팅방 (메시지가 이미 존재함)")
                                     break
                                     
                             if not isOverlaped:
-                                self.on_logging_send_msg.emit(self.LOGGING_INFO, f"'{chat_title}' 조건에 맞는 채팅방")
+                                self.on_logging_send_msg.emit(self.LOGGING_INFO, f"'{chat_title}'는 조건에 맞는 채팅방")
                                 self.on_logging_send_msg.emit(self.LOGGING_INFO, f"'{chat_title}'에 채팅 보내는 중...")
                                 sendMessage(driver, None, text, True)
                                 self.on_logging_send_msg.emit(self.LOGGING_INFO, f"'{chat_title}'에 채팅 보내기 완료!")
@@ -136,6 +140,7 @@ class SendMessageThread(QThread):
                             break
                         except Exception as e:
                             logging.exception(e)
+                            continue
                         
                     driver.close()
                     driver.switch_to.window(driver.window_handles[0])
@@ -169,16 +174,35 @@ def sendMessage(driver, url, text, onlyAction=False):
         textarea = wait.until(
             EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/section/div[2]/div[1]/textarea'))
         )
-        textarea.send_keys(text)
+        pyperclip.copy(text)
+        textarea.send_keys(Keys.CONTROL, 'v')
+        textarea.send_keys(Keys.ENTER)
 
+        """
         send_btn = wait.until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="wrap"]/section/div[2]/div[2]/button'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="wrap"]/section/div[2]/div[2]/button'))
         )
         send_btn.click()
-        
-        
-    except NoSuchElementException as e:
-        print('Error: ', e)
+        """
+    except:
+        logging.exception('Error: ')
+
+    #logging.info("루프 전")
+
+    while True:
+        try:
+            messages = driver.find_elements_by_class_name('txt._messageContent')
+                
+            for m in messages:
+                #logging.info(m.text.strip())
+                #logging.info(m.get_attribute("innerText").strip())
+                if m.text.strip() == text:
+                    logging.info("정상작동")
+                    return
+        except:
+            logging.exception("")
+            continue
+
 
 def getChatUrls(driver, url, keyword, onlyAction=False):
     wait = WebDriverWait(driver, WAIT_SECONDS)
@@ -332,6 +356,7 @@ class GetChatThread(QThread):
             self.on_error_get_chat.emit()
         try:
             self.driver.close()
+            self.driver.quit()
         except:
             logging.info("작업이 취소됨")
 
@@ -340,6 +365,7 @@ class GetChatThread(QThread):
             #self.wait(5000) #5000ms = 5s
             self.quit()
             self.driver.close()
+            self.driver.quit()
         except:
             logging.error("드라이버 없음")
 

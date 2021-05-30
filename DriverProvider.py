@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 import chromedriver_autoinstaller
 import subprocess
 
@@ -11,5 +12,7 @@ def setup_driver():
     chromedriver_autoinstaller.install(cwd=True)
     co = Options()
     co.add_experimental_option('debuggerAddress', '127.0.0.1:9222')
+    #service = Service()
+    #service.creationflags = 0x08000000
     driver = webdriver.Chrome(options=co)
     return driver

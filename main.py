@@ -53,6 +53,8 @@ class MyWindow(QMainWindow, form_class):
         super().__init__()
         self.setupUi(self)
 
+        #logging.info("이거나 먹어라")
+
         self.setWindowIcon(QIcon('chat.ico'))
 
         """

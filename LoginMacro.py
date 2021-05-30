@@ -131,7 +131,9 @@ class ValidateAccountThread(QThread):
                 LOGIN_ERROR:self.state_login_error
             }.get(result)
             signal.emit()
+            
             self.driver.close()
+            self.driver.quit()
 
     def state_validation_finished(self):
         logging.debug(self.driver.current_url)
@@ -140,9 +142,13 @@ class ValidateAccountThread(QThread):
             self.state_login_success.emit()
         else:
             self.state_login_error.emit()
+        
         self.driver.close()
+        self.driver.quit()
 
     def stop(self):
+        
         self.driver.close()
+        self.driver.quit()
         self.quit()
         self.wait(5000) #5000ms = 5s
