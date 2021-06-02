@@ -12,8 +12,8 @@ import os
 from collections import deque 
 
 logger = logging.getLogger()
-FORMAT = "[%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
-logging.basicConfig(format=FORMAT)
+FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
+logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
 logger.setLevel(logging.INFO)
 
 form_class = uic.loadUiType(os.path.abspath("./ui/send_message_macro_v2.ui"))[0]
@@ -53,8 +53,6 @@ class MyWindow(QMainWindow, form_class):
         super().__init__()
         self.setupUi(self)
 
-        #logging.info("이거나 먹어라")
-
         self.setWindowIcon(QIcon('chat.ico'))
 
         """
@@ -67,19 +65,83 @@ class MyWindow(QMainWindow, form_class):
         self.validateAccountThread.state_login_fail.connect(self.state_login_fail)
         self.validateAccountThread.state_login_error.connect(self.state_login_error)
         self.validateAccountThread.state_login_validation.connect(self.state_login_validation)
+        """
+        ::END::
+        """
 
-        self.sendMessageThread = SendMessageThread(parent=self)
-        self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
-        self.sendMessageThread.on_error_send_msg.connect(self.on_error_send_msg)
-        self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
+        """
+        메뉴바
+        ::START::
+        """
+        self.actionSave.triggered.connect(self.on_save_clicked)
         """
         ::END::
         """
 
         connect()
         self.accounts = getAccounts()
+        self.chrome_edit.setText(getStringExtra(KEY_CHROME_ROUTE, ""))
+        self.keyword_edit.setText(getStringExtra(KEY_KEYWORD, ""))
+        self.content_edit.setPlainText(getStringExtra(KEY_CONTENT, ""))
         close()
         self.bindToAccountTable()
+
+    """
+    메뉴바
+    ::START::
+    """
+    def on_save_clicked(self):
+        logging.debug("계정 저장")
+        connect()
+        logging.debug(f"프로그램에 저장된 계정 목록(저장되지 않음): {self.accounts}")
+        add_cnt = 0
+        delete_cnt = 0
+        for oper in self.oper_accounts:
+            if oper[0] == self.OPER_ADD:
+                addAccount(oper[1][0], oper[1][1])
+                add_cnt+=1
+            if oper[0] == self.OPER_DELETE:
+                deleteAccount(oper[1][0])
+                delete_cnt+=1
+        self.accounts = getAccounts()
+        close()
+
+        if add_cnt != 0:
+            self.loggingInfo("계정 저장", f"{add_cnt} 개가 DB에 추가됨")
+        if delete_cnt != 0:
+            self.loggingInfo("계정 저장", f"{delete_cnt} 개가 DB에서 삭제됨")
+
+        self.oper_accounts.clear()
+
+        connect()
+        putStringExtra(KEY_CHROME_ROUTE, self.chrome_edit.text())
+        putStringExtra(KEY_KEYWORD, self.keyword_edit.text())
+        putStringExtra(KEY_CONTENT, self.content_edit.toPlainText())
+        close()
+    """
+    ::END::
+    """
+
+    """
+    크롬 경로 설정
+    ::START::
+    """
+    def on_validation_chrome_clicked(self):
+        self.loggingInfo("크롬 확인", "크롬 경로 확인 중 ...")
+        try:
+            driver = setup_driver(self.chrome_edit.text().strip())
+            driver.close()
+            self.loggingInfo("크롬 확인", "올바른 크롬 경로")
+            QMessageBox.information(self.centralwidget, '크롬 경로 확인', '올바른 크롬 경로입니다', QMessageBox.Ok, QMessageBox.Ok)
+        except:
+            logging.exception("")
+            self.loggingError("크롬 확인", "올바르지 않은 크롬 경로")
+            QMessageBox.critical(self.centralwidget, '크롬 경로 오류', '크롬 경로를 확인해 주세요', QMessageBox.Ok, QMessageBox.Ok)
+
+            
+    """
+    ::END::
+    """
 
     """
     계정 화면 설정
@@ -102,14 +164,25 @@ class MyWindow(QMainWindow, form_class):
     def on_validation_account_clicked(self):
         logging.debug("계정 확인")
         id = self.id_edit.text().strip()
+        logging.debug("1")
         pw = self.pw_edit.text().strip()
+        logging.debug("2")
+
 
         if id != '' and pw != '':
+            logging.debug("3")
+
             self.validateAccountThread.id = id
+            logging.debug("4")
+            
             self.validateAccountThread.pw = pw
+            logging.debug("5")
+
             self.validateAccountThread.start()
+            logging.debug("6")
         else:
             self.loggingWarning("계정 확인", "아이디 혹은 비밀번호가 비어 있음")
+            logging.debug("7")
 
     def on_add_account_clicked(self):
         logging.debug("계정 추가")
@@ -133,28 +206,6 @@ class MyWindow(QMainWindow, form_class):
         self.toggleAddButton(False)
 
         self.validateRunButton()
-
-    
-    def on_save_account_clicked(self):
-        logging.debug("계정 저장")
-        connect()
-        logging.debug(f"프로그램에 저장된 계정 목록(저장되지 않음): {self.accounts}")
-        add_cnt = 0
-        delete_cnt = 0
-        for oper in self.oper_accounts:
-            if oper[0] == self.OPER_ADD:
-                addAccount(oper[1][0], oper[1][1])
-                add_cnt+=1
-            if oper[0] == self.OPER_DELETE:
-                deleteAccount(oper[1][0])
-                delete_cnt+=1
-        self.accounts = getAccounts()
-        close()
-
-        self.loggingInfo("계정 저장", f"{add_cnt} 개가 DB에 추가됨")
-        self.loggingInfo("계정 저장", f"{delete_cnt} 개가 DB에서 삭제됨")
-
-        self.oper_accounts.clear()
 
     def on_delete_account_clicked(self):
         logging.debug("계정 삭제")
@@ -249,28 +300,34 @@ class MyWindow(QMainWindow, form_class):
         self.toggleRunButton(False)
         self.toggleStopButton(True)
 
-        self.remain_accounts = deque(self.accounts)
-        keywords = list(map(lambda x: x.strip(), self.keyword_edit.text().strip().split(',')))
-        contents = list(map(lambda x: x.strip(' \n'), self.content_edit.toPlainText().strip(' \n').split(',')))
+        self.remain_accounts = self.accounts
+        self.i = 0
+        self.isRunning = True
+        self.keywords = list(map(lambda x: x.strip(), self.keyword_edit.text().strip().split(',')))
+        self.contents = list(map(lambda x: x.strip(' \n'), self.content_edit.toPlainText().strip(' \n').split(',')))
 
-        _keywords = "'"+"', '".join(keywords)+"'"
-        _contents = "'"+"', '".join(contents)+"'"
+        _keywords = "'"+"', '".join(self.keywords)+"'"
+        _contents = "'"+"', '".join(self.contents)+"'"
         self.loggingInfo("채팅 보내기", f"키워드 : {_keywords}, 내용 : {_contents}")
 
-        while self.remain_accounts:
-            id,pw = self.remain_accounts.popleft()
+        if self.remain_accounts and self.isRunning:
+            id,pw = self.remain_accounts[self.i%len(self.remain_accounts)]
+            self.i+=1
+            self.sendMessageThread = SendMessageThread(parent=self)
+            self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
+            self.sendMessageThread.on_error_send_msg.connect(self.on_error_send_msg)
+            self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
             self.sendMessageThread.id = id
             self.sendMessageThread.pw = pw
-            self.sendMessageThread.keywords = keywords
-            self.sendMessageThread.contents = contents
+            self.sendMessageThread.keywords = self.keywords
+            self.sendMessageThread.contents = self.contents
             self.sendMessageThread.start()
         
-
-
     def on_stop_clicked(self):
         logging.debug("중단")
         if self.sendMessageThread.isRunning():
             self.sendMessageThread.stop()
+        self.isRunning = False
         self.toggleStopButton(False)
         self.toggleRunButton(True)
 
@@ -294,9 +351,24 @@ class MyWindow(QMainWindow, form_class):
 
     def on_finished_send_msg(self, id):
         self.loggingInfo("채팅 보내기", f"{id}가 완료됨")
-        self.progressBar.setValue((1-len(self.remain_accounts)/len(self.accounts))*100)
-        self.toggleStopButton(False)
-        self.validateRunButton()
+        if self.i%len(self.remain_accounts) == 0:
+                self.progressBar.reset()
+        self.progressBar.setValue(int((self.i%len(self.remain_accounts)+1)/len(self.remain_accounts)*100))
+        if self.isRunning:
+            id,pw = self.remain_accounts[self.i%len(self.remain_accounts)]
+            self.i+=1
+            self.sendMessageThread = SendMessageThread(parent=self)
+            self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
+            self.sendMessageThread.on_error_send_msg.connect(self.on_error_send_msg)
+            self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
+            self.sendMessageThread.id = id
+            self.sendMessageThread.pw = pw
+            self.sendMessageThread.keywords = self.keywords
+            self.sendMessageThread.contents = self.contents
+            self.sendMessageThread.start()
+        else:
+            self.toggleStopButton(False)
+            self.validateRunButton()
         
     def on_error_send_msg(self, id, msg):
         self.loggingError("채팅 보내기", f"{id}에서 {msg}")
@@ -322,6 +394,7 @@ class MyWindow(QMainWindow, form_class):
     def loggingError(self, action, msg):
         currentTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log_view.append(f'<p style="color: red"><b>[{currentTime}] {action} - <i>{msg}</i></b></p>') 
+
     def loggingWarning(self, action, msg):
         currentTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.log_view.append(f'<p style="color: grey">[{currentTime}] {action} - <b>{msg}</b></p>') 

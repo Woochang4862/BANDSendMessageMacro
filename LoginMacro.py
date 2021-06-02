@@ -15,9 +15,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from DriverProvider import *
 
 logger = logging.getLogger()
-FORMAT = "[%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
-logging.basicConfig(format=FORMAT)
-logger.setLevel(logging.INFO)
+FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
+logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
+logger.setLevel(logging.DEBUG)
 
 LOGGED_IN = "LOGGED_IN"
 LOGIN_SUCCESS = "LOGIN_SUCCESS"
