@@ -14,7 +14,7 @@ from collections import deque
 logger = logging.getLogger()
 FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
 logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 form_class = uic.loadUiType(os.path.abspath("./ui/send_message_macro_v2.ui"))[0]
 
@@ -137,8 +137,6 @@ class MyWindow(QMainWindow, form_class):
             logging.exception("")
             self.loggingError("크롬 확인", "올바르지 않은 크롬 경로")
             QMessageBox.critical(self.centralwidget, '크롬 경로 오류', '크롬 경로를 확인해 주세요', QMessageBox.Ok, QMessageBox.Ok)
-
-            
     """
     ::END::
     """
@@ -164,25 +162,15 @@ class MyWindow(QMainWindow, form_class):
     def on_validation_account_clicked(self):
         logging.debug("계정 확인")
         id = self.id_edit.text().strip()
-        logging.debug("1")
         pw = self.pw_edit.text().strip()
-        logging.debug("2")
-
 
         if id != '' and pw != '':
-            logging.debug("3")
-
             self.validateAccountThread.id = id
-            logging.debug("4")
-            
             self.validateAccountThread.pw = pw
-            logging.debug("5")
-
+            self.validateAccountThread.path = self.chrome_edit.text().strip()
             self.validateAccountThread.start()
-            logging.debug("6")
         else:
-            self.loggingWarning("계정 확인", "아이디 혹은 비밀번호가 비어 있음")
-            logging.debug("7")
+            self.loggingWarning("계정 확인", "이메일 혹은 비밀번호가 비어 있음")
 
     def on_add_account_clicked(self):
         logging.debug("계정 추가")
@@ -191,7 +179,7 @@ class MyWindow(QMainWindow, form_class):
         
         for _id, _ in self.accounts:
             if _id == id:
-                self.loggingError("계정 추가", "동일한 아이디가 이미 존재함")
+                self.loggingError("계정 추가", "동일한 이메일이 이미 존재함")
                 return
         self.accounts.append((id,pw))
         self.oper_accounts.append((self.OPER_ADD,(id,pw)))
@@ -233,7 +221,7 @@ class MyWindow(QMainWindow, form_class):
         self.account_table.clear()
         self.account_table.setColumnCount(2)
         self.account_table.setRowCount(len(self.accounts))
-        self.account_table.setHorizontalHeaderLabels(["아이디", "비밀번호"])
+        self.account_table.setHorizontalHeaderLabels(["이메일", "비밀번호"])
 
         for idx, (id, pw) in enumerate(self.accounts): # 사용자정의 item 과 checkbox widget 을, 동일한 cell 에 넣어서 , 추후 정렬 가능하게 한다. 
 
@@ -259,7 +247,7 @@ class MyWindow(QMainWindow, form_class):
     @pyqtSlot()
     def state_login_fail(self):
         self.toggleAddButton(False)
-        QMessageBox.critical(self, '로그인 실패', '아이디 또는 비밀번호를 확인해 주세요', QMessageBox.Ok, QMessageBox.Ok)
+        QMessageBox.critical(self, '로그인 실패', '이메일 또는 비밀번호를 확인해 주세요', QMessageBox.Ok, QMessageBox.Ok)
 
     @pyqtSlot()
     def state_login_error(self):
@@ -270,8 +258,8 @@ class MyWindow(QMainWindow, form_class):
     def state_login_validation(self):
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Information)
-        msgBox.setText("휴대폰 인증 후 아래 확인 버튼을 눌러 주세요")
-        msgBox.setWindowTitle("휴대폰 인증 요청")
+        msgBox.setText("이메일 인증 후 아래 확인 버튼을 눌러 주세요")
+        msgBox.setWindowTitle("이메일 인증 요청")
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.buttonClicked.connect(lambda _ : self.state_validation_finished.emit())
         msgBox.exec()
@@ -300,7 +288,7 @@ class MyWindow(QMainWindow, form_class):
         self.toggleRunButton(False)
         self.toggleStopButton(True)
 
-        self.remain_accounts = self.accounts
+        self.current_accounts = self.accounts
         self.i = 0
         self.isRunning = True
         self.keywords = list(map(lambda x: x.strip(), self.keyword_edit.text().strip().split(',')))
@@ -310,8 +298,8 @@ class MyWindow(QMainWindow, form_class):
         _contents = "'"+"', '".join(self.contents)+"'"
         self.loggingInfo("채팅 보내기", f"키워드 : {_keywords}, 내용 : {_contents}")
 
-        if self.remain_accounts and self.isRunning:
-            id,pw = self.remain_accounts[self.i%len(self.remain_accounts)]
+        if self.current_accounts and self.isRunning:
+            id,pw = self.current_accounts[self.i%len(self.current_accounts)]
             self.i+=1
             self.sendMessageThread = SendMessageThread(parent=self)
             self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
@@ -319,6 +307,7 @@ class MyWindow(QMainWindow, form_class):
             self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
             self.sendMessageThread.id = id
             self.sendMessageThread.pw = pw
+            self.sendMessageThread.path = self.chrome_edit.text().strip()
             self.sendMessageThread.keywords = self.keywords
             self.sendMessageThread.contents = self.contents
             self.sendMessageThread.start()
@@ -351,11 +340,11 @@ class MyWindow(QMainWindow, form_class):
 
     def on_finished_send_msg(self, id):
         self.loggingInfo("채팅 보내기", f"{id}가 완료됨")
-        if self.i%len(self.remain_accounts) == 0:
+        if self.i%len(self.current_accounts) == 0:
                 self.progressBar.reset()
-        self.progressBar.setValue(int((self.i%len(self.remain_accounts)+1)/len(self.remain_accounts)*100))
+        self.progressBar.setValue(int(self.i%len(self.current_accounts)/len(self.current_accounts)*100))
         if self.isRunning:
-            id,pw = self.remain_accounts[self.i%len(self.remain_accounts)]
+            id,pw = self.current_accounts[self.i%len(self.current_accounts)]
             self.i+=1
             self.sendMessageThread = SendMessageThread(parent=self)
             self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
@@ -363,6 +352,7 @@ class MyWindow(QMainWindow, form_class):
             self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
             self.sendMessageThread.id = id
             self.sendMessageThread.pw = pw
+            self.sendMessageThread.path = self.chrome_edit.text().strip()
             self.sendMessageThread.keywords = self.keywords
             self.sendMessageThread.contents = self.contents
             self.sendMessageThread.start()

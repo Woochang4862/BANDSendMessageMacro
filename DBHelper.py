@@ -23,17 +23,28 @@ KEY_CONTENT = "key_content"
 def connect():
     global con
     global cursor
-    if os.path.isfile(DB_NAME):
-        con = sqlite3.connect(f"./{DB_NAME}")
-        cursor = con.cursor()
-    else:
-        con = sqlite3.connect(f"./{DB_NAME}")
-        cursor = con.cursor()
-        cursor.execute(f"CREATE TABLE {TABLE_ACCOUNT}({ACCOUNT_ID} text primary key, {ACCOUNT_PW} text)")
-        cursor.execute(f"CREATE TABLE {TABLE_PREFERENCE}({PREFERENCE_KEY} text primary key, {PREFERENCE_STRING} text, {PREFERENCE_INTEGER} integer, {PREFERENCE_REAL} real)")
-        ## foreign [이 테이블의 컬럼] references [참조할 테이블]([그 테이블의 칼럼명])
-        #cursor.execute(f"CREATE TABLE {TABLE_CHAT}({CHAT_ID} integer primary key autoincrement, {CHAT_BAND_NAME} text, {CHAT_NAME} text, {CHAT_URL} text, {ACCOUNT_ID} text, foreign key({ACCOUNT_ID}) references {TABLE_ACCOUNT}({ACCOUNT_ID}) )")
-    
+    con = sqlite3.connect(f"./{DB_NAME}")
+    cursor = con.cursor()    
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS {TABLE_ACCOUNT}({ACCOUNT_ID} text primary key, {ACCOUNT_PW} text)")
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS {TABLE_PREFERENCE}({PREFERENCE_KEY} text primary key, {PREFERENCE_STRING} text, {PREFERENCE_INTEGER} integer, {PREFERENCE_REAL} real)")
+    ## foreign [이 테이블의 컬럼] references [참조할 테이블]([그 테이블의 칼럼명])
+    #cursor.execute(f"CREATE TABLE {TABLE_CHAT}({CHAT_ID} integer primary key autoincrement, {CHAT_BAND_NAME} text, {CHAT_NAME} text, {CHAT_URL} text, {ACCOUNT_ID} text, foreign key({ACCOUNT_ID}) references {TABLE_ACCOUNT}({ACCOUNT_ID}) )")
+    # for _, name, _type, nullable, default, pk, in cursor.execute(f"PRAGMA table_info('{TABLE_ACCOUNT}')").fetchall():
+    #     if name == ACCOUNT_ID:
+    #         if _type == 'TEXT' and default is None and pk == 1:
+    #             pass
+    #         else:
+    #             cursor.execute(f"DROP TABLE {TABLE_ACCOUNT}")
+    #             cursor.execute(f"CREATE TABLE {TABLE_ACCOUNT}({ACCOUNT_ID} text primary key, {ACCOUNT_PW} text)")
+    #     elif name == ACCOUNT_PW:
+    #         if _type == 'TEXT' and default is None and pk == 0:
+    #             pass
+    #         else:
+    #             cursor.execute(f"DROP TABLE {TABLE_ACCOUNT}")
+    #             cursor.execute(f"CREATE TABLE {TABLE_ACCOUNT}({ACCOUNT_ID} text primary key, {ACCOUNT_PW} text)")
+    #     else:
+    #         cursor.execute(f"DROP TABLE {TABLE_ACCOUNT}")
+    #             cursor.execute(f"CREATE TABLE {TABLE_ACCOUNT}({ACCOUNT_ID} text primary key, {ACCOUNT_PW} text)")
     #cursor.execute("PRAGMA foreign_keys=1")
 
 def close():

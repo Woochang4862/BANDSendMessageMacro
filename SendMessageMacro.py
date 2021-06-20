@@ -17,6 +17,7 @@ logger.setLevel(logging.INFO)
 WAIT_SECONDS = 10
 
 class SendMessageThread(QThread):
+    path = ''
     id = ''
     pw = ''
     keywords = []
@@ -35,28 +36,23 @@ class SendMessageThread(QThread):
 
     def run(self):
         try:
-            self.driver = setup_driver()
-        except:
-            logging.exception("Error : ")
-            self.stop()
-            return
-            
-        self.on_logging_send_msg.emit(self.LOGGING_INFO, "로그인 시도 중...")
-        result = loginWithPhone(self.driver, self.id,self.pw)
-        if result == LOGIN_SUCCESS or result == LOGGED_IN:
-            self.on_logging_send_msg.emit(self.LOGGING_INFO, "로그인 완료")
-            start = time.time()
-            self.on_logging_send_msg.emit(self.LOGGING_INFO, '조건에 맞는 채팅방이 있으면 메시지를 보내게 됩니다...')
-            self.discoverChatsAndSendMessage(self.driver, self.keywords, self.contents)
-            self.on_logging_send_msg.emit(self.LOGGING_INFO, f'실행시간 : {time.time()-start}초')
-            self.on_finished_send_msg.emit(self.id)
-        elif result == LOGIN_ERROR:
-            self.on_error_send_msg.emit(self.id, "로그인 실패")
-        try:
+            self.driver = setup_driver(self.path)    
+            self.on_logging_send_msg.emit(self.LOGGING_INFO, "로그인 시도 중...")
+            result = loginWithEmail(self.driver, self.id,self.pw)
+            if result == LOGIN_SUCCESS or result == LOGGED_IN:
+                self.on_logging_send_msg.emit(self.LOGGING_INFO, "로그인 완료")
+                start = time.time()
+                self.on_logging_send_msg.emit(self.LOGGING_INFO, '조건에 맞는 채팅방이 있으면 메시지를 보내게 됩니다...')
+                self.discoverChatsAndSendMessage(self.driver, self.keywords, self.contents)
+                self.on_logging_send_msg.emit(self.LOGGING_INFO, f'실행시간 : {time.time()-start}초')
+                self.on_finished_send_msg.emit(self.id)
+            elif result == LOGIN_ERROR:
+                self.on_error_send_msg.emit(self.id, "로그인 실패")
             self.driver.close()
             self.driver.quit()
-        except Exception as e:
-            self.on_logging_send_msg.emit(self.LOGGING_WARNING, "작업이 취소됨 : "+str(e))
+            #self.on_logging_send_msg.emit(self.LOGGING_WARNING, "작업이 취소됨 : "+str(e))
+        except:
+            logging.exception("")
 
     def stop(self):
         try:
@@ -93,8 +89,8 @@ class SendMessageThread(QThread):
                 logging.debug(f"채팅요소 및 제목 : {len(chats)}")
             except NoSuchElementException:
                 break
-            except InvalidSessionIdException:
-                return
+            except InvalidSessionIdException as e:
+                raise e
             except Exception as e:
                 #logging.exception(e)
                 continue
@@ -103,17 +99,27 @@ class SendMessageThread(QThread):
         
         self.on_logging_send_msg.emit(self.LOGGING_INFO, "채팅방 검사 중...")
         correctChats = []
-        for chat, chat_title in chats:
+        for rPos, (chat, chat_title) in enumerate(chats):
             for keyword, text in zip(keywords,texts):
+                self.on_logging_send_msg.emit(self.LOGGING_INFO, f"현재 변수 상태 : chat_title : {chat_title}, keyword : {keyword}, text : {text}")
                 if keyword in chat_title:
-                    chat.click()
-                    driver.switch_to.window(driver.window_handles[1])
+                    while self.isRunning:
+                        try:
+                            chat.click()
+                            driver.switch_to.window(driver.window_handles[1])
+                            break
+                        except:
+                            showChannelsBtn.click()
+                            chat = driver.find_element_by_xpath(f'//*[@id="header"]/div[2]/ul/li[4]/article/div/ul/li[{len(chats)-rPos}]')
+                            continue
                     start = time.time()
                     self.on_logging_send_msg.emit(self.LOGGING_INFO, "채팅방 로딩 기다리는 중...")
                     while self.isRunning:
                         try:
                             driver.find_element_by_xpath('//*[@id="wrap"]/div[1]/div[2]/div[2]/div')
                             break
+                        except InvalidSessionIdException as e:
+                            raise e
                         except:
                             if time.time()-start >= 10:
                                 driver.refresh()
@@ -143,8 +149,10 @@ class SendMessageThread(QThread):
                                 self.on_logging_send_msg.emit(self.LOGGING_INFO, f"'{chat_title}'에 메시지 보내기 완료!")
                                 correctChats.append(chat_title)
                             break
-                        except Exception as e:
-                            logging.exception(e)
+                        except InvalidSessionIdException as e:
+                            raise e
+                        except:
+                            logging.exception("")
                             continue
                         
                     driver.close()
@@ -169,15 +177,12 @@ class SendMessageThread(QThread):
             driver.get(url)
         
         if self.isRunning:
-            try:
-                textarea = wait.until(
-                    EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/section/div[2]/div[1]/textarea'))
-                )
-                pyperclip.copy(text)
-                textarea.send_keys(Keys.CONTROL, 'v')
-                textarea.send_keys(Keys.ENTER)
-            except:
-                logging.exception('Error: ')
+            textarea = wait.until(
+                EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/section/div[2]/div[1]/textarea'))
+            )
+            pyperclip.copy(text)
+            textarea.send_keys(Keys.CONTROL, 'v')
+            textarea.send_keys(Keys.ENTER)
 
         self.on_logging_send_msg.emit(self.LOGGING_INFO, "전송 확인 중...")
         time.sleep(5)
@@ -189,6 +194,8 @@ class SendMessageThread(QThread):
                     if m.text.strip() == text:
                         self.on_logging_send_msg.emit(self.LOGGING_INFO, "전송 완료")
                         return
+            except InvalidSessionIdException as e:
+                raise e
             except:
                 logging.exception("")
                 continue
@@ -326,7 +333,7 @@ class GetChatThread(QThread):
 
     def run(self):
         self.driver = setup_driver()
-        result = loginWithPhone(self.driver, self.id,self.pw)
+        result = loginWithEmail(self.driver, self.id,self.pw)
         if result == LOGIN_SUCCESS or result == LOGGED_IN:
             start = time.time()
             logging.info('밴드 주소 가져오는 중...')

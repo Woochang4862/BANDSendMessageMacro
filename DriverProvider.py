@@ -18,6 +18,7 @@ logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
 logger.setLevel(logging.DEBUG)
 
 def open_chrome_with_debug_mode(path):
+    logging.debug(f"path : {path}")
     if path == '':
         if platform.architecture()[0] == '32bit':
             return subprocess.Popen(f'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir=C:/ChromeTEMP --daemon')
@@ -83,15 +84,19 @@ def setup_driver(path):
     #     download_chrome_driver(getChromeVersion())
     #     #chromedriver_autoinstaller.install(cwd=True)
     #driver = webdriver.Chrome(options=co, executable_path=os.path.abspath(f"./{getChromeVersion()[0:2]}/chromedriver"))
-    open_chrome_with_debug_mode(path)
-    co = Options()
-    co.add_experimental_option('debuggerAddress', '127.0.0.1:9222')
-    if getattr(sys, 'frozen', False):   
-        chromedriver_path = os.path.join(sys._MEIPASS, "chromedriver.exe")  
-        driver = webdriver.Chrome(chromedriver_path, options=co)
-    else:
-        chromedriver_autoinstaller.install(cwd=True)
-        driver = webdriver.Chrome(f"./{getChromeVersion()[0:2]}/chromedriver.exe", options=co)
-    return driver
+    try:
+        open_chrome_with_debug_mode(path)
+        co = Options()
+        co.add_experimental_option('debuggerAddress', '127.0.0.1:9222')
+        if getattr(sys, 'frozen', False):   
+            chromedriver_path = os.path.join(sys._MEIPASS, "chromedriver.exe")  
+            driver = webdriver.Chrome(chromedriver_path, options=co)
+        else:
+            chromedriver_autoinstaller.install(cwd=True)
+            driver = webdriver.Chrome(f"./{getChromeVersion()[0:2]}/chromedriver.exe", options=co)
+        return driver
+    except:
+        logging.exception("")
+        raise Exception("크롬 드라이버를 얻어오는 중 에러 발생")
 
 #setup_driver()

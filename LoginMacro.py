@@ -81,6 +81,7 @@ def loginWithPhone(driver, phone, pw, onlyAction=False):
         input_phone = driver.find_element_by_id("input_local_phone_number")
         input_phone.click()
         pyperclip.copy(phone)
+        input_phone.clear()
         input_phone.send_keys(Keys.CONTROL, 'v')
         submit_btn = driver.find_element_by_xpath('//*[@id="phone_login_form"]/button')
         submit_btn.click()
@@ -89,6 +90,7 @@ def loginWithPhone(driver, phone, pw, onlyAction=False):
         password = driver.find_element_by_id("pw")
         password.click()
         pyperclip.copy(pw)
+        password.clear()
         password.send_keys(Keys.CONTROL, 'v')
         password.submit()
         time.sleep(1)
@@ -101,7 +103,47 @@ def loginWithPhone(driver, phone, pw, onlyAction=False):
             return LOGIN_VALIDATION
         return LOGIN_FAIL
     except Exception as e:
-        print(e)
+        logging.exception("")
+        return LOGIN_ERROR
+
+def loginWithEmail(driver, phone, pw, onlyAction=False):
+    if not onlyAction:
+        driver.get('https://auth.band.us/email_login?keep_login=true')
+        
+        if driver.current_url != 'https://auth.band.us/email_login?keep_login=true':
+            return LOGGED_IN
+    try:
+        """
+        휴대폰으로 로그인
+        """
+        input_email = driver.find_element_by_id("input_email")
+        input_email.click()
+        pyperclip.copy(phone)
+        input_email.clear()
+        input_email.send_keys(Keys.CONTROL, 'v')
+        input_email.send_keys(Keys.ENTER)
+        
+        time.sleep(1)
+
+        password = driver.find_element_by_id("pw")
+        password.click()
+        pyperclip.copy(pw)
+        password.clear()
+        password.send_keys(Keys.CONTROL, 'v')
+        password.submit()
+        time.sleep(1)
+        
+        time.sleep(3)
+
+        if driver.current_url == 'https://band.us/':
+            return LOGIN_SUCCESS
+        elif driver.current_url == 'https://auth.band.us/b/validation/phone_number?next_url=https%3A%2F%2Fband.us':
+            trust = driver.find_element_by_id("trust")
+            trust.click()
+            return LOGIN_VALIDATION
+        return LOGIN_FAIL
+    except Exception as e:
+        logging.exception("")
         return LOGIN_ERROR
 
 class ValidateAccountThread(QThread):
@@ -111,6 +153,7 @@ class ValidateAccountThread(QThread):
     state_login_error = pyqtSignal()
     state_login_validation = pyqtSignal()
 
+    path = ''
     id = ''
     pw = ''
 
@@ -119,21 +162,24 @@ class ValidateAccountThread(QThread):
         parent.state_validation_finished.connect(self.state_validation_finished)
 
     def run(self):
-        self.driver = setup_driver()
-        result = loginWithPhone(self.driver, self.id, self.pw, onlyAction=False)
-        if result == LOGIN_VALIDATION:
-            self.state_login_validation.emit()
-        else:
-            signal = {
-                LOGGED_IN:self.state_logged_in,
-                LOGIN_SUCCESS:self.state_login_success,
-                LOGIN_FAIL:self.state_login_fail,
-                LOGIN_ERROR:self.state_login_error
-            }.get(result)
-            signal.emit()
-            
-            self.driver.close()
-            self.driver.quit()
+        try:
+            self.driver = setup_driver(self.path)
+            result = loginWithEmail(self.driver, self.id, self.pw, onlyAction=False)
+            if result == LOGIN_VALIDATION:
+                self.state_login_validation.emit()
+            else:
+                signal = {
+                    LOGGED_IN:self.state_logged_in,
+                    LOGIN_SUCCESS:self.state_login_success,
+                    LOGIN_FAIL:self.state_login_fail,
+                    LOGIN_ERROR:self.state_login_error
+                }.get(result)
+                signal.emit()
+                
+                self.driver.close()
+                self.driver.quit()
+        except:
+            logging.exception("")
 
     def state_validation_finished(self):
         logging.debug(self.driver.current_url)
@@ -147,8 +193,11 @@ class ValidateAccountThread(QThread):
         self.driver.quit()
 
     def stop(self):
-        
-        self.driver.close()
-        self.driver.quit()
-        self.quit()
-        self.wait(5000) #5000ms = 5s
+        try:
+            self.isRunning = False
+            self.quit()
+            self.driver.close()
+            self.driver.quit()
+            self.on_logging_send_msg.emit(self.LOGGING_INFO, "작업이 취소됨")
+        except Exception as e:
+            self.on_logging_send_msg.emit(self.LOGGING_WARNING, "제거할 드라이버 없음 : "+str(e))

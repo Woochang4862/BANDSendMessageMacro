@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>667</width>
-    <height>632</height>
+    <height>651</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -65,7 +65,7 @@
                <item row="0" column="0">
                 <widget class="QLabel" name="id_label">
                  <property name="text">
-                  <string>아이디</string>
+                  <string>이메일</string>
                  </property>
                  <property name="buddy">
                   <cstring>id_edit</cstring>
