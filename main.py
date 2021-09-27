@@ -1,4 +1,3 @@
-import sys
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -6,15 +5,15 @@ from PyQt5 import uic
 from SendMessageMacro import *
 from DBHelper import *
 
+import sys
 import logging
 import time
 import os
-from collections import deque 
 
 logger = logging.getLogger()
 FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
-logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(format=FORMAT, filename=f'./log/{time.strftime("%Y-%m-%d")}.log')
+logger.setLevel(logging.INFO)
 
 form_class = uic.loadUiType(os.path.abspath("./ui/send_message_macro_v2.ui"))[0]
 
@@ -25,6 +24,7 @@ class MyWindow(QMainWindow, form_class):
     ::START::
     """
     state_validation_finished = pyqtSignal()
+    state_identification_finished = pyqtSignal()
     """
     ::END::
     """
@@ -34,7 +34,7 @@ class MyWindow(QMainWindow, form_class):
     ::START::
     """
     accounts = []
-    oper_accounts = deque([])
+    isRunning = False
     """
     ::END::
     """
@@ -43,8 +43,6 @@ class MyWindow(QMainWindow, form_class):
     상수
     ::START::
     """
-    OPER_DELETE = 0
-    OPER_ADD = 1
     """
     ::END::
     """
@@ -65,6 +63,7 @@ class MyWindow(QMainWindow, form_class):
         self.validateAccountThread.state_login_fail.connect(self.state_login_fail)
         self.validateAccountThread.state_login_error.connect(self.state_login_error)
         self.validateAccountThread.state_login_validation.connect(self.state_login_validation)
+        self.validateAccountThread.state_login_identification.connect(self.state_login_identification)
         """
         ::END::
         """
@@ -80,8 +79,9 @@ class MyWindow(QMainWindow, form_class):
 
         connect()
         self.accounts = getAccounts()
-        self.chrome_edit.setText(getStringExtra(KEY_CHROME_ROUTE, ""))
         self.keyword_edit.setText(getStringExtra(KEY_KEYWORD, ""))
+        close()
+        connect()
         self.content_edit.setPlainText(getStringExtra(KEY_CONTENT, ""))
         close()
         self.bindToAccountTable()
@@ -92,13 +92,15 @@ class MyWindow(QMainWindow, form_class):
     """
     def on_save_clicked(self):
         logging.debug("계정 저장")
+        if self.isRunning:
+            return
         connect()
         logging.debug(f"프로그램에 저장된 계정 목록(저장되지 않음): {self.accounts}")
         add_cnt = 0
         delete_cnt = 0
         for oper in self.oper_accounts:
             if oper[0] == self.OPER_ADD:
-                addAccount(oper[1][0], oper[1][1])
+                addAccount(oper[1][0], oper[1][1], oper[1][2])
                 add_cnt+=1
             if oper[0] == self.OPER_DELETE:
                 deleteAccount(oper[1][0])
@@ -114,29 +116,9 @@ class MyWindow(QMainWindow, form_class):
         self.oper_accounts.clear()
 
         connect()
-        putStringExtra(KEY_CHROME_ROUTE, self.chrome_edit.text())
         putStringExtra(KEY_KEYWORD, self.keyword_edit.text())
         putStringExtra(KEY_CONTENT, self.content_edit.toPlainText())
         close()
-    """
-    ::END::
-    """
-
-    """
-    크롬 경로 설정
-    ::START::
-    """
-    def on_validation_chrome_clicked(self):
-        self.loggingInfo("크롬 확인", "크롬 경로 확인 중 ...")
-        try:
-            driver = setup_driver(self.chrome_edit.text().strip())
-            driver.close()
-            self.loggingInfo("크롬 확인", "올바른 크롬 경로")
-            QMessageBox.information(self.centralwidget, '크롬 경로 확인', '올바른 크롬 경로입니다', QMessageBox.Ok, QMessageBox.Ok)
-        except:
-            logging.exception("")
-            self.loggingError("크롬 확인", "올바르지 않은 크롬 경로")
-            QMessageBox.critical(self.centralwidget, '크롬 경로 오류', '크롬 경로를 확인해 주세요', QMessageBox.Ok, QMessageBox.Ok)
     """
     ::END::
     """
@@ -153,6 +135,10 @@ class MyWindow(QMainWindow, form_class):
         logging.debug(text)
         self.toggleAddButton(False)
 
+    def on_ip_changed(self, text):
+        logging.info(text)
+        self.toggleAddButton(False)
+
     def toggleAddButton(self, enabled=None):
         if enabled is None:
             self.add_btn.setEnabled(not self.add_btn.isEnabled())
@@ -161,28 +147,38 @@ class MyWindow(QMainWindow, form_class):
 
     def on_validation_account_clicked(self):
         logging.debug("계정 확인")
+        if self.isRunning:
+            return
         id = self.id_edit.text().strip()
         pw = self.pw_edit.text().strip()
+        ip = self.ip_edit.text().strip()
 
         if id != '' and pw != '':
             self.validateAccountThread.id = id
             self.validateAccountThread.pw = pw
-            self.validateAccountThread.path = self.chrome_edit.text().strip()
+            self.validateAccountThread.ip = ip
             self.validateAccountThread.start()
+            self.loggingInfo("계정 확인", f"현재 IP주소 : {ip}")
         else:
             self.loggingWarning("계정 확인", "이메일 혹은 비밀번호가 비어 있음")
 
     def on_add_account_clicked(self):
         logging.debug("계정 추가")
+        if self.isRunning:
+            return
         id = self.id_edit.text().strip()
         pw = self.pw_edit.text().strip()
+        ip = self.ip_edit.text().strip()
         
-        for _id, _ in self.accounts:
+        for _id, _, _ in self.accounts:
             if _id == id:
                 self.loggingError("계정 추가", "동일한 이메일이 이미 존재함")
                 return
-        self.accounts.append((id,pw))
-        self.oper_accounts.append((self.OPER_ADD,(id,pw)))
+        
+        connect()
+        addAccount(id, pw, ip)
+        self.accounts = getAccounts()
+        close()
 
         self.loggingInfo("계정 추가", f"{id} 을/를 추가함")
 
@@ -190,6 +186,7 @@ class MyWindow(QMainWindow, form_class):
 
         self.id_edit.clear()
         self.pw_edit.clear()
+        self.ip_edit.clear()
 
         self.toggleAddButton(False)
 
@@ -197,7 +194,8 @@ class MyWindow(QMainWindow, form_class):
 
     def on_delete_account_clicked(self):
         logging.debug("계정 삭제")
-        
+        if self.isRunning:
+            return
         deletedAccounts = 0
         for _range in self.account_table.selectedRanges():
             topRow = _range.topRow()
@@ -205,28 +203,32 @@ class MyWindow(QMainWindow, form_class):
 
             for row in range(topRow, bottomRow+1):
                 id = self.account_table.item(row, 0).text()
-                pw = self.account_table.item(row, 1).text()
-                self.accounts.remove((id,pw))
-                self.oper_accounts.append((self.OPER_DELETE, (id,pw)))
-                deletedAccounts+=1
+                deletedAccounts += 1
+                connect()
+                deleteAccount(id)
+                close()
 
         self.loggingInfo("계정 삭제", f"{deletedAccounts} 개를 삭제 시킴")
+
+        connect()
+        self.accounts = getAccounts()
+        close()
 
         self.bindToAccountTable()
 
         self.validateRunButton()
 
-
     def bindToAccountTable(self):
         self.account_table.clear()
-        self.account_table.setColumnCount(2)
+        self.account_table.setColumnCount(3)
         self.account_table.setRowCount(len(self.accounts))
-        self.account_table.setHorizontalHeaderLabels(["이메일", "비밀번호"])
+        self.account_table.setHorizontalHeaderLabels(["이메일", "비밀번호", "아이피"])
 
-        for idx, (id, pw) in enumerate(self.accounts): # 사용자정의 item 과 checkbox widget 을, 동일한 cell 에 넣어서 , 추후 정렬 가능하게 한다. 
+        for idx, (id, pw, ip) in enumerate(self.accounts): # 사용자정의 item 과 checkbox widget 을, 동일한 cell 에 넣어서 , 추후 정렬 가능하게 한다. 
 
             self.account_table.setItem(idx, 0, QTableWidgetItem(id)) 
             self.account_table.setItem(idx, 1, QTableWidgetItem(pw)) 
+            self.account_table.setItem(idx, 2, QTableWidgetItem(ip)) 
 
         self.account_table.setSortingEnabled(False)  # 정렬기능
         self.account_table.resizeRowsToContents()
@@ -263,6 +265,14 @@ class MyWindow(QMainWindow, form_class):
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.buttonClicked.connect(lambda _ : self.state_validation_finished.emit())
         msgBox.exec()
+
+    @pyqtSlot()
+    def state_login_identification(self):
+        new_pw, ok = QInputDialog.getText(self, 'IP 변경 감지됨', '본인확인 후 변경된 비밀번호를 입력해주세요')
+
+        if ok:
+            self.pw_edit.setText(new_pw)
+            self.state_identification_finished.emit()
     """
     ::END::
     """
@@ -270,11 +280,19 @@ class MyWindow(QMainWindow, form_class):
     def on_keyword_changed(self, text):
         logging.debug(text)
         self.validateRunButton()
+
+        connect()
+        putStringExtra(KEY_KEYWORD, text)
+        close()
     
     def on_content_changed(self):
         text = self.content_edit.toPlainText().strip()
         logging.debug(text)
         self.validateRunButton()
+
+        connect()
+        putStringExtra(KEY_CONTENT, text)
+        close()
 
     """
     실행/중단 설정
@@ -282,8 +300,6 @@ class MyWindow(QMainWindow, form_class):
     """
     def on_run_clicked(self):
         logging.debug("실행")
-
-        self.progressBar.reset()
 
         self.toggleRunButton(False)
         self.toggleStopButton(True)
@@ -299,7 +315,7 @@ class MyWindow(QMainWindow, form_class):
         self.loggingInfo("채팅 보내기", f"키워드 : {_keywords}, 내용 : {_contents}")
 
         if self.current_accounts and self.isRunning:
-            id,pw = self.current_accounts[self.i%len(self.current_accounts)]
+            id,pw,ip = self.current_accounts[self.i%len(self.current_accounts)]
             self.i+=1
             self.sendMessageThread = SendMessageThread(parent=self)
             self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
@@ -307,10 +323,14 @@ class MyWindow(QMainWindow, form_class):
             self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
             self.sendMessageThread.id = id
             self.sendMessageThread.pw = pw
-            self.sendMessageThread.path = self.chrome_edit.text().strip()
+            self.sendMessageThread.ip = ip
             self.sendMessageThread.keywords = self.keywords
             self.sendMessageThread.contents = self.contents
             self.sendMessageThread.start()
+            self.loggingInfo("채팅 보내기", f"현재 IP 주소 : {ip}")
+            self.current_id_label.setText(f"현재 아이디 : {id}")
+            self.current_ip_label.setText(f"현재 아이피 : {ip}")
+            self.current_repeat_label.setText(f"반복 횟수 : {(self.i-1)//len(self.current_accounts)}")
         
     def on_stop_clicked(self):
         logging.debug("중단")
@@ -340,11 +360,8 @@ class MyWindow(QMainWindow, form_class):
 
     def on_finished_send_msg(self, id):
         self.loggingInfo("채팅 보내기", f"{id}가 완료됨")
-        if self.i%len(self.current_accounts) == 0:
-                self.progressBar.reset()
-        self.progressBar.setValue(int(self.i%len(self.current_accounts)/len(self.current_accounts)*100))
         if self.isRunning:
-            id,pw = self.current_accounts[self.i%len(self.current_accounts)]
+            id,pw,ip = self.current_accounts[self.i%len(self.current_accounts)]
             self.i+=1
             self.sendMessageThread = SendMessageThread(parent=self)
             self.sendMessageThread.on_finished_send_msg.connect(self.on_finished_send_msg)
@@ -352,11 +369,16 @@ class MyWindow(QMainWindow, form_class):
             self.sendMessageThread.on_logging_send_msg.connect(self.on_logging_send_msg)
             self.sendMessageThread.id = id
             self.sendMessageThread.pw = pw
-            self.sendMessageThread.path = self.chrome_edit.text().strip()
+            self.sendMessageThread.ip = ip
             self.sendMessageThread.keywords = self.keywords
             self.sendMessageThread.contents = self.contents
             self.sendMessageThread.start()
+            self.loggingInfo("채팅 보내기", f"현재 IP 주소 : {ip}")
+            self.current_id_label.setText(f"현재 아이디 : {id}")
+            self.current_ip_label.setText(f"현재 아이피 : {ip}")
+            self.current_repeat_label.setText(f"반복 횟수 : {(self.i-1)//len(self.current_accounts)}")
         else:
+            self.isRunning = False
             self.toggleStopButton(False)
             self.validateRunButton()
         
@@ -392,6 +414,14 @@ class MyWindow(QMainWindow, form_class):
     ::END::
     """
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

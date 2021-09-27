@@ -1,6 +1,7 @@
 import time
 import logging
 from selenium.webdriver.support.ui import *
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException, WebDriverException, TimeoutException, StaleElementReferenceException, InvalidSessionIdException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,7 +12,6 @@ from PyQt5.QtCore import *
 
 logger = logging.getLogger()
 FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
-logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
 logger.setLevel(logging.INFO)
 
 WAIT_SECONDS = 10
@@ -20,6 +20,7 @@ class SendMessageThread(QThread):
     path = ''
     id = ''
     pw = ''
+    ip = ''
     keywords = []
     contents = []
 
@@ -36,7 +37,7 @@ class SendMessageThread(QThread):
 
     def run(self):
         try:
-            self.driver = setup_driver(self.path)    
+            self.driver = setup_driver(self.ip)    
             self.on_logging_send_msg.emit(self.LOGGING_INFO, "로그인 시도 중...")
             result = loginWithEmail(self.driver, self.id,self.pw)
             if result == LOGIN_SUCCESS or result == LOGGED_IN:
@@ -121,7 +122,7 @@ class SendMessageThread(QThread):
                         except InvalidSessionIdException as e:
                             raise e
                         except:
-                            if time.time()-start >= 10:
+                            if time.time()-start >= 15 if self.ip else 10:
                                 driver.refresh()
                                 start = time.time()
                             continue
@@ -326,13 +327,14 @@ class GetChatThread(QThread):
 
     id = ''
     pw = ''
+    ip = ''
     keyword = ''
 
     def __init__(self, parent=None):
         super().__init__()
 
     def run(self):
-        self.driver = setup_driver()
+        self.driver = setup_driver(self.ip)
         result = loginWithEmail(self.driver, self.id,self.pw)
         if result == LOGIN_SUCCESS or result == LOGGED_IN:
             start = time.time()

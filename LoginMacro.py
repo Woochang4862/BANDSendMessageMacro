@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 import time
 import logging
 from selenium import webdriver
-from selenium.webdriver.support.ui import *
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 import pyperclip
 from selenium.common.exceptions import NoSuchElementException, NoAlertPresentException, NoAlertPresentException, WebDriverException
@@ -16,7 +16,6 @@ from DriverProvider import *
 
 logger = logging.getLogger()
 FORMAT = "[%(asctime)s][%(filename)s:%(lineno)3s - %(funcName)20s()] %(message)s"
-logging.basicConfig(format=FORMAT, filename='./log/send_message_macro.log')
 logger.setLevel(logging.DEBUG)
 
 LOGGED_IN = "LOGGED_IN"
@@ -24,6 +23,7 @@ LOGIN_SUCCESS = "LOGIN_SUCCESS"
 LOGIN_FAIL = "LOGIN_FAIL"
 LOGIN_ERROR = "LOGIN_ERROR"
 LOGIN_VALIDATION = "LOGIN_VALIDATION"
+LOGIN_IDENTIFICATION = "LOGIN_IDENTIFICATION"
 
 def loginWithNaver(driver, id, pw, onlyAction=False):
     if not onlyAction:
@@ -106,7 +106,7 @@ def loginWithPhone(driver, phone, pw, onlyAction=False):
         logging.exception("")
         return LOGIN_ERROR
 
-def loginWithEmail(driver, phone, pw, onlyAction=False):
+def loginWithEmail(driver, email, pw, onlyAction=False):
     if not onlyAction:
         driver.get('https://auth.band.us/email_login?keep_login=true')
         
@@ -114,11 +114,11 @@ def loginWithEmail(driver, phone, pw, onlyAction=False):
             return LOGGED_IN
     try:
         """
-        휴대폰으로 로그인
+        이메일 로그인
         """
         input_email = driver.find_element_by_id("input_email")
         input_email.click()
-        pyperclip.copy(phone)
+        pyperclip.copy(email)
         input_email.clear()
         input_email.send_keys(Keys.CONTROL, 'v')
         input_email.send_keys(Keys.ENTER)
@@ -141,8 +141,10 @@ def loginWithEmail(driver, phone, pw, onlyAction=False):
             trust = driver.find_element_by_id("trust")
             trust.click()
             return LOGIN_VALIDATION
+        elif driver.current_url == 'https://auth.band.us/show_user_account_status':
+            return LOGIN_IDENTIFICATION
         return LOGIN_FAIL
-    except Exception as e:
+    except Exception:
         logging.exception("")
         return LOGIN_ERROR
 
@@ -152,21 +154,26 @@ class ValidateAccountThread(QThread):
     state_login_fail = pyqtSignal()
     state_login_error = pyqtSignal()
     state_login_validation = pyqtSignal()
+    state_login_identification = pyqtSignal()
 
     path = ''
     id = ''
     pw = ''
+    ip = ''
 
     def __init__(self, parent=None):
         super().__init__()
         parent.state_validation_finished.connect(self.state_validation_finished)
+        parent.state_identification_finished.connect(self.state_identification_finished)
 
     def run(self):
         try:
-            self.driver = setup_driver(self.path)
+            self.driver = setup_driver(self.ip)
             result = loginWithEmail(self.driver, self.id, self.pw, onlyAction=False)
             if result == LOGIN_VALIDATION:
                 self.state_login_validation.emit()
+            elif result == LOGIN_IDENTIFICATION:
+                self.state_login_identification.emit()
             else:
                 signal = {
                     LOGGED_IN:self.state_logged_in,
@@ -184,6 +191,15 @@ class ValidateAccountThread(QThread):
     def state_validation_finished(self):
         logging.debug(self.driver.current_url)
 
+        if self.driver.current_url == 'https://band.us/':
+            self.state_login_success.emit()
+        else:
+            self.state_login_error.emit()
+        
+        self.driver.close()
+        self.driver.quit()
+
+    def state_identification_finished(self):
         if self.driver.current_url == 'https://band.us/':
             self.state_login_success.emit()
         else:
